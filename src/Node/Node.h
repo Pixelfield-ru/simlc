@@ -9,6 +9,7 @@
 #include <optional>
 #include <unordered_map>
 #include <vector>
+#include <iostream>
 
 namespace SIML {
     enum class NodeType {
@@ -19,80 +20,109 @@ namespace SIML {
         IDENT
     };
 
+    struct NodeString;
+    struct NodeNumber;
+    struct NodeObject;
+    struct NodeComponent;
+    struct NodeIdent;
+
     struct Node {
-        Node(NodeType type) noexcept : nodeType(type) {}
-        
-        NodeType nodeType;
+        explicit Node(const NodeType type) noexcept : m_nodeType(type) {}
+
+        NodeType m_nodeType;
         virtual ~Node() = default;
-        
-        std::string nodeTypeToPreview(NodeType nodeType) {
+        [[nodiscard]] const NodeString* tryCastString() const noexcept;
+        NodeString* tryCastString() noexcept;
+        [[nodiscard]] const NodeNumber* tryCastNumber() const noexcept;
+        NodeNumber* tryCastNumber() noexcept;
+        [[nodiscard]] const NodeObject* tryCastObject() const noexcept;
+        NodeObject* tryCastObject() noexcept;
+        [[nodiscard]] const NodeComponent* tryCastComponent() const noexcept;
+        NodeComponent* tryCastComponent() noexcept;
+        [[nodiscard]] const NodeIdent* tryCastIdent() const noexcept;
+        NodeIdent* tryCastIdent() noexcept;
+
+        static std::string nodeTypeToString(const NodeType nodeType)
+        {
             switch (nodeType) {
                 case SIML::NodeType::STRING: return "String";
                 case SIML::NodeType::COMPONENT: return "Component";
-                case SIML::NodeType::IDENT: return "Identificator";
+                case SIML::NodeType::IDENT: return "Ident";
                 case SIML::NodeType::NUMBER: return "Number";
                 case SIML::NodeType::OBJECT: return "Object";
             }
+            return "Unknown";
         }
-        
-        // Virtual write method to output the tree structure
-        virtual void write(std::ostream& stream, int identLevel = 0) const = 0;
+
+        friend std::ostream& operator<<(std::ostream &os, const Node &node) {
+            return writeInternal(os, node, 0);
+        }
+
+    private:
+        static std::ostream& writeInternal(std::ostream& os, const SIML::Node& node, int spacing);
     };
 
     struct NodeString : Node {
-        NodeString() noexcept : Node(NodeType::STRING) {}
+        NodeString() noexcept : Node(NodeType::STRING) {}\
+        ~NodeString() override = default;
 
         std::string_view m_unescapedValue;
         std::optional<std::string_view> tag;
 
-        std::string escaped() noexcept;
-        
-        void write(std::ostream& stream, int identLevel = 0) const override;
+        [[nodiscard]] std::string escaped() const noexcept;
     };
 
     struct NodeNumber : Node {
         NodeNumber() noexcept : Node(NodeType::NUMBER) {}
+        ~NodeNumber() override = default;
         
         std::optional<std::string_view> m_rawIntegerPart;
         std::optional<std::optional<std::string_view>> m_rawFloatPart;
         std::optional<std::string_view> m_tag;
 
-        bool isFloat() noexcept;
-        int integerPart() noexcept;
-        int floatPart() noexcept;
-        float asFloat() noexcept;
-        double asDouble() noexcept;
-        
-        void write(std::ostream& stream, int identLevel = 0) const override;
+        [[nodiscard]] bool isFloat() const noexcept;
+        [[nodiscard]] int integerPart() const noexcept;
+        [[nodiscard]] int floatPart() const noexcept;
+        [[nodiscard]] float asFloat() const noexcept;
+        [[nodiscard]] double asDouble() const noexcept;
     };
 
     struct NodeObject : Node {
         NodeObject() noexcept : Node(NodeType::OBJECT) {}
+        ~NodeObject() override = default;
 
         std::unordered_map<std::string_view, std::unique_ptr<Node>> m_namedProperties;
         std::vector<std::unique_ptr<Node>> m_positionalProperties;
-        
-        void write(std::ostream& stream, int identLevel = 0) const override;
         
         static Expected<std::unique_ptr<NodeObject>, ParseError> parseAsGlobalNode(Lexer& lexer) noexcept;
     };
 
     struct NodeComponent : Node {
         NodeComponent() noexcept : Node(NodeType::COMPONENT) {}
+        ~NodeComponent() override = default;
 
-        std::string_view name;
-        std::unique_ptr<Node> value;
-        
-        void write(std::ostream& stream, int identLevel = 0) const override;
+        std::string_view m_name;
+        std::unique_ptr<Node> m_value;
     };
 
     struct NodeIdent : Node {
         NodeIdent() noexcept : Node(NodeType::IDENT) {}
+        ~NodeIdent() override = default;
 
         std::string_view ident;
-        
-        void write(std::ostream& stream, int identLevel = 0) const override;
     };
+
+#define tryCast(name, type) \
+    inline [[nodiscard]] const Node##name* Node::tryCast##name() const noexcept \
+    { return m_nodeType == NodeType::type ? static_cast<const Node##name *>(this) : nullptr; } \
+    inline [[nodiscard]] Node##name* Node::tryCast##name() noexcept \
+    { return m_nodeType == NodeType::type ? static_cast<Node##name *>(this) : nullptr; } \
+
+    tryCast(String, STRING)
+    tryCast(Number, NUMBER)
+    tryCast(Object, OBJECT)
+    tryCast(Component, COMPONENT)
+    tryCast(Ident, IDENT)
 }
 
 #endif

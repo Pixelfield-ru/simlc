@@ -11,7 +11,6 @@ add_library(siml::compiler ALIAS siml_compiler)
 
 target_include_directories(siml_compiler PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-
 enable_testing()
 
 add_executable(siml_tests tests/main.cpp)

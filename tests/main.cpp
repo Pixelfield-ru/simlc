@@ -8,27 +8,14 @@
 #include <iostream>
 #include <string_view>
 
-// Yep, i used deepseek to write tests, lol
-
-std::string readFileIntoString(const std::string& filePath) {
-    std::ifstream fileStream(filePath);
-
-    if (!fileStream.is_open()) {
-        std::cerr << "Error: Could not open file " << filePath << std::endl;
-        return ""; // Return an empty string on error
-    }
-
-    std::stringstream buffer;
-    buffer << fileStream.rdbuf(); // Read the entire file buffer into the stringstream
-    fileStream.close(); // Close the file stream
-
-    return buffer.str(); // Return the content as a std::string
-}
-
 void cout_all_tokens(SIML::Lexer& lexer);
 
+#define assert_fail(str)
+
+
+
 int main() {
-    std::string str = readFileIntoString("tests/main.siml");
+    std::string str = ".test: \"hello\"; some {.number: 3.6;}";
     auto source = SIML::Source(str);
     auto lexer = SIML::Lexer(source);
 
@@ -38,7 +25,8 @@ int main() {
         std::cout << "Error: " << node.error().m_message;
         return 0;
     }
-    node->write(std::cout, 2);
+
+    std::cout << **node;
 
     // cout_all_tokens(lexer);
 

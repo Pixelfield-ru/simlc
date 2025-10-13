@@ -17,6 +17,7 @@ build/
 cmake-build-debug
 cmake-build-release
 .idea
+cmake-debug/
 
 # CLion
 #  JetBrains specific template is maintained in a separate JetBrains.gitignore that can

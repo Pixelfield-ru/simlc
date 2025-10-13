@@ -15,7 +15,6 @@ Expected<std::unique_ptr<SIML::Node>, SIML::ParseError> parse_next_node(SIML::Le
         *token == SIML::TokenType::TEXT_BLOCK_CLOSE |
         *token == SIML::TokenType::EXPR_END
     ) {
-        // TODO: Show what token
         return Unexpected(
             SIML::ParseError("Unexpected token " + SIML::Lexer::tokenTypeToPreview(*token), lexer)
         );
@@ -26,20 +25,20 @@ Expected<std::unique_ptr<SIML::Node>, SIML::ParseError> parse_next_node(SIML::Le
         auto ident = lexer.getNextIdent();
         auto next = lexer.peek();
         if (next && *next != SIML::TokenType::EXPR_END) {
-            auto component = std::make_unique<SIML::NodeComponent>(SIML::NodeComponent {});
-            component->name = ident;
+            auto component = std::make_unique<SIML::NodeComponent>();
+            component->m_name = ident;
             expectset(auto value, parse_next_node(lexer));
-            component->value = std::move(value);
+            component->m_value = std::move(value);
             return std::move(component);
         } else { // next exists AND it ;
             lexer.consume_next(); // consume ;
 
-            auto ident_node = std::make_unique<SIML::NodeIdent>(SIML::NodeIdent {});
+            auto ident_node = std::make_unique<SIML::NodeIdent>();
             ident_node->ident = ident;
             return std::move(ident_node);
         }
     } else if (*token == SIML::TokenType::STRING) { // "..."
-        auto node = std::make_unique<SIML::NodeString>(SIML::NodeString {});
+        auto node = std::make_unique<SIML::NodeString>();
         auto temp = lexer.getNextString(); reterr(temp);
         node->m_unescapedValue = std::move(*temp);
         
@@ -56,7 +55,7 @@ Expected<std::unique_ptr<SIML::Node>, SIML::ParseError> parse_next_node(SIML::Le
         
         return std::move(node);
     } else if (*token == SIML::TokenType::NUMBER | *token == SIML::TokenType::DOT) { // X.X | .X | X.
-        auto node = std::make_unique<SIML::NodeNumber>(SIML::NodeNumber {});
+        auto node = std::make_unique<SIML::NodeNumber>();
         auto token = lexer.peek();
 
         if (token == SIML::TokenType::NUMBER) {
@@ -137,7 +136,7 @@ Expected<std::unique_ptr<SIML::NodeObject>, SIML::ParseError> parse_next_object(
     // TODO: assert in debug mode that it is, in fact TokenType::BLOCK_OPEN
     
     lexer.consume_next();
-    auto obj = std::make_unique<SIML::NodeObject>(SIML::NodeObject {});
+    auto obj = std::make_unique<SIML::NodeObject>();
 
     while (auto token = lexer.peek()) {
         if (*token == SIML::TokenType::BLOCK_CLOSE) { // End of object
@@ -152,7 +151,7 @@ Expected<std::unique_ptr<SIML::NodeObject>, SIML::ParseError> parse_next_object(
 }
 
 Expected<std::unique_ptr<SIML::NodeObject>, SIML::ParseError> SIML::NodeObject::parseAsGlobalNode(SIML::Lexer& lexer) noexcept {
-    auto base_node = std::make_unique<SIML::NodeObject>(SIML::NodeObject {});
+    auto base_node = std::make_unique<SIML::NodeObject>();
 
     while (auto token = lexer.peek()) {
         auto temp = parse_object_element(lexer, *base_node, *token);
