@@ -17,7 +17,7 @@ namespace SIML {
         NUMBER,
         OBJECT,
         COMPONENT,
-        IDENT
+        IDENT 
     };
 
     struct NodeString;
@@ -26,21 +26,16 @@ namespace SIML {
     struct NodeComponent;
     struct NodeIdent;
 
+    template <typename From, typename To>
+    concept CanBeCasted = requires(From* from) {
+        {To::tryCastFrom(from)} -> std::convertible_to<To*>;
+    };
+
     struct Node {
         explicit Node(const NodeType type) noexcept : m_nodeType(type) {}
 
         NodeType m_nodeType;
         virtual ~Node() = default;
-        [[nodiscard]] const NodeString* tryCastString() const noexcept;
-        NodeString* tryCastString() noexcept;
-        [[nodiscard]] const NodeNumber* tryCastNumber() const noexcept;
-        NodeNumber* tryCastNumber() noexcept;
-        [[nodiscard]] const NodeObject* tryCastObject() const noexcept;
-        NodeObject* tryCastObject() noexcept;
-        [[nodiscard]] const NodeComponent* tryCastComponent() const noexcept;
-        NodeComponent* tryCastComponent() noexcept;
-        [[nodiscard]] const NodeIdent* tryCastIdent() const noexcept;
-        NodeIdent* tryCastIdent() noexcept;
 
         static std::string nodeTypeToString(const NodeType nodeType)
         {
@@ -58,9 +53,28 @@ namespace SIML {
             return writeInternal(os, node, 0);
         }
 
+        template<typename T> requires CanBeCasted<Node, T>
+        [[nodiscard]] const T* tryCastInto() const noexcept {
+            return T::tryCastFrom(this);
+        }
+
+        template<typename T> requires CanBeCasted<Node, T>
+        [[nodiscard]] T* tryCastInto() noexcept {
+            return T::tryCastFrom(this);
+        }
     private:
         static std::ostream& writeInternal(std::ostream& os, const SIML::Node& node, int spacing);
     };
+
+#define tryCastFromDef(nodeName, nodeType) \
+[[nodiscard]] static nodeName* tryCastFrom(Node* node) noexcept { \
+    return node->m_nodeType == NodeType::nodeType ? \
+    static_cast<nodeName*>(node) : nullptr; \
+} \
+[[nodiscard]] static const nodeName* tryCastFrom(const Node* node) noexcept { \
+    return node->m_nodeType == NodeType::nodeType ? \
+    static_cast<const nodeName*>(node) : nullptr; \
+}
 
     struct NodeString : Node {
         NodeString() noexcept : Node(NodeType::STRING) {}\
@@ -70,6 +84,8 @@ namespace SIML {
         std::optional<std::string_view> tag;
 
         [[nodiscard]] std::string escaped() const noexcept;
+
+        tryCastFromDef(NodeString, STRING)
     };
 
     struct NodeNumber : Node {
@@ -85,6 +101,8 @@ namespace SIML {
         [[nodiscard]] int floatPart() const noexcept;
         [[nodiscard]] float asFloat() const noexcept;
         [[nodiscard]] double asDouble() const noexcept;
+
+        tryCastFromDef(NodeNumber, NUMBER)
     };
 
     struct NodeObject : Node {
@@ -95,6 +113,8 @@ namespace SIML {
         std::vector<std::unique_ptr<Node>> m_positionalProperties;
         
         static Expected<std::unique_ptr<NodeObject>, ParseError> parseAsGlobalNode(Lexer& lexer) noexcept;
+
+        tryCastFromDef(NodeObject, OBJECT)
     };
 
     struct NodeComponent : Node {
@@ -103,6 +123,8 @@ namespace SIML {
 
         std::string_view m_name;
         std::unique_ptr<Node> m_value;
+
+        tryCastFromDef(NodeComponent, COMPONENT)
     };
 
     struct NodeIdent : Node {
@@ -110,19 +132,9 @@ namespace SIML {
         ~NodeIdent() override = default;
 
         std::string_view ident;
+
+        tryCastFromDef(NodeIdent, IDENT)
     };
-
-#define tryCast(name, type) \
-    inline [[nodiscard]] const Node##name* Node::tryCast##name() const noexcept \
-    { return m_nodeType == NodeType::type ? static_cast<const Node##name *>(this) : nullptr; } \
-    inline [[nodiscard]] Node##name* Node::tryCast##name() noexcept \
-    { return m_nodeType == NodeType::type ? static_cast<Node##name *>(this) : nullptr; } \
-
-    tryCast(String, STRING)
-    tryCast(Number, NUMBER)
-    tryCast(Object, OBJECT)
-    tryCast(Component, COMPONENT)
-    tryCast(Ident, IDENT)
 }
 
 #endif

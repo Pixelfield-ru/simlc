@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 
+
 void repeat(std::ostream& os, char character, int amount)
 {
     for (int i = 0; i < amount; i++) {
@@ -15,13 +16,13 @@ void repeat(std::ostream& os, char character, int amount)
 }
 
 std::ostream& SIML::Node::writeInternal(std::ostream& os, const SIML::Node& node, int spacing) {
-    if (const auto str = node.tryCastString()) {
+    if (const auto str = node.tryCastInto<NodeString>()) {
         os << "\"" << str->m_unescapedValue << "\"" << ";";
-    } else if (const auto number = node.tryCastNumber()) {
+    } else if (const auto number = node.tryCastInto<NodeNumber>()) {
         os << number->asDouble() << ";"; // TODO: fixme to string representation
-    } else if (const auto ident = node.tryCastIdent()) {
+    } else if (const auto ident = node.tryCastInto<NodeIdent>()) {
         os << ident << ";";
-    } else if (const auto object = node.tryCastObject()) {
+    } else if (const auto object = node.tryCastInto<NodeObject>()) {
         os << "{" << "\n";
         const auto newSpacing = spacing + 4;
         for (auto& [name, prop] : object->m_namedProperties) {
@@ -35,8 +36,10 @@ std::ostream& SIML::Node::writeInternal(std::ostream& os, const SIML::Node& node
             writeInternal(os, *prop, newSpacing);
             os << "\n";
         }
-    } else if (const auto component = node.tryCastComponent()) {
-        os << component->m_name;
+        repeat(os, ' ', spacing);
+        os << "}";
+    } else if (const auto component = node.tryCastInto<NodeComponent>()) {
+        os << component->m_name << " ";
         writeInternal(os, *component->m_value, spacing);
     }
 
@@ -62,7 +65,7 @@ bool SIML::NodeNumber::isFloat() const noexcept {
 int parse_str(const std::string_view str) noexcept {
     try {
         int i;
-        std::from_chars(&*str.begin(), &*str.end(), i);
+        std::from_chars(str.data(), str.data() + str.length(), i);
         return i;
     } catch (const std::exception& e) {}
     return 0; // How tf did you get there???

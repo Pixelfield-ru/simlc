@@ -11,8 +11,8 @@ Expected<std::unique_ptr<SIML::Node>, SIML::ParseError> parse_next_node(SIML::Le
     auto token = lexer.peek();
     if (!token) {return Unexpected(SIML::ParseError("Expected value", lexer));}
     
-    if (*token == SIML::TokenType::BLOCK_CLOSE | 
-        *token == SIML::TokenType::TEXT_BLOCK_CLOSE |
+    if (*token == SIML::TokenType::BLOCK_CLOSE || 
+        *token == SIML::TokenType::TEXT_BLOCK_CLOSE ||
         *token == SIML::TokenType::EXPR_END
     ) {
         return Unexpected(
@@ -54,7 +54,7 @@ Expected<std::unique_ptr<SIML::Node>, SIML::ParseError> parse_next_node(SIML::Le
         }
         
         return std::move(node);
-    } else if (*token == SIML::TokenType::NUMBER | *token == SIML::TokenType::DOT) { // X.X | .X | X.
+    } else if (*token == SIML::TokenType::NUMBER || *token == SIML::TokenType::DOT) { // X.X | .X | X.
         auto node = std::make_unique<SIML::NodeNumber>();
         auto token = lexer.peek();
 
